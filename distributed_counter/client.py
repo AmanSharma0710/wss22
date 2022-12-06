@@ -4,9 +4,10 @@ import os
 import signal
 import sys
 import time
+import pickle
 from threading import current_thread
 
-from constants import LOGFILE, N_WORKERS, GLOB
+from constants import LOGFILE, N_WORKERS, GLOB, OUT, FNAME, COUNT
 from worker import WcWorker
 from mrds import MyRedis
 
@@ -48,6 +49,18 @@ if __name__ == "__main__":
       logging.info(f"Worker-{pid_killed} died with status {status}!")
     except:
       break
+    
+  logging.info('Mapping done! Now reducing...')
+  last_id = "0"
+  for _ in range(rds.rds.xlen(OUT)):
+    entry = rds.rds.xread({OUT: last_id}, 1, 0)[0][1][0]
+    last_id = entry[0]
+    file = entry[1][FNAME]
+    print(f"Processing {file}...")
+    with open(file, 'rb') as f:
+      word_count = pickle.load(f)
+      for word, count in word_count.items():
+        rds.rds.zincrby(COUNT, count, word)
 
   for word, c in rds.top(10):
     logging.info(f"{word.decode()}: {int(c)}")
