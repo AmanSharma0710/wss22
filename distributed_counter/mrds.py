@@ -5,7 +5,7 @@ from typing import Optional, Final
 from redis.client import Redis
 
 from base import Worker
-from constants import IN, COUNT, FNAME
+from constants import IN, OUT, COUNT, FNAME
 
 
 class MyRedis:
@@ -17,6 +17,9 @@ class MyRedis:
 
   def add_file(self, fname: str):
     self.rds.xadd(IN, {FNAME: fname})
+
+  def add_output_file(self, fname: str):
+    self.rds.xadd(OUT, {FNAME: fname})
 
   def get_file(self, name):
     return self.rds.xreadgroup(Worker.GROUP, name, {IN: ">"}, 1, 0)[0][1][0][1][FNAME]
